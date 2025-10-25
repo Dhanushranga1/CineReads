@@ -13,7 +13,10 @@ class GPTService:
     def __init__(self):
         if not settings.openai_api_key:
             raise ValueError("OpenAI API key is required")
-        self.client = openai.AsyncOpenAI(api_key=settings.openai_api_key)  # Use AsyncOpenAI
+        self.client = openai.AsyncOpenAI(
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url
+        )  # Use AsyncOpenAI with configurable base URL
     
     async def generate_recommendations(self, movies: List[str], preferences: UserPreferences = None) -> List[RecommendationResponse]:
         """
@@ -24,13 +27,13 @@ class GPTService:
         
         try:
             response = await self.client.chat.completions.create(  # Add await
-                model="gpt-4o-mini",
+                model=settings.gpt_model,
                 messages=[
                     {"role": "system", "content": self._get_system_prompt()},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1500,  # Increased for better responses
-                temperature=0.7
+                max_tokens=2000,  # Increased for complete responses
+                temperature=0.3   # Lower temperature for more structured output
             )
             
             content = response.choices[0].message.content
@@ -43,30 +46,20 @@ class GPTService:
     
     def _get_system_prompt(self) -> str:
         """Optimized system prompt for unified recommendations"""
-        return """You are a literary taste analyst specializing in cross-media pattern recognition.
+        return """You are a literary taste analyst. Your task is to analyze movie preferences and recommend books.
 
-CORE TASK: Analyze movie preferences → Extract unified aesthetic patterns → Recommend books matching that profile
+CRITICAL: You must respond with ONLY valid JSON. No explanations, no markdown, no extra text.
 
 ANALYSIS PRINCIPLES:
-- Identify narrative DNA (themes, tone, complexity) across ALL movies
-- Focus on overarching patterns, not individual movie matches
-- Extract emotional resonance and artistic sensibilities
-- Handle genre conflicts by finding deeper connective tissue
+- Identify themes, tone, and narrative style across movies
+- Extract emotional and artistic preferences
+- Find deeper aesthetic connections
 
-SCORING CALIBRATION:
-- confidence_score: 0.9+ = clear patterns, 0.7-0.8 = moderate patterns, <0.7 = conflicting signals
-- taste_match_score: 0.9+ = exceptional thematic alignment, 0.8+ = strong match, 0.7+ = good fit
+SCORING:
+- confidence_score: 0.7-1.0 based on pattern clarity
+- taste_match_score: 0.7-1.0 based on thematic alignment
 
-QUALITY STANDARDS:
-- Each book reason: 75+ words explaining taste profile connection
-- Avoid obvious/surface-level matches
-- Prioritize literary quality and thematic depth
-- Return exactly the JSON format specified (no extra text)
-
-EDGE CASE HANDLING:
-- Single movie: Focus on directorial style, themes, narrative approach
-- Conflicting genres: Find deeper aesthetic commonalities
-- Obscure films: Analyze based on available thematic elements"""
+RESPONSE FORMAT: Valid JSON only, exactly matching the required structure."""
 
     def _get_json_schema(self) -> str:
         """Returns the expected JSON response schema"""
@@ -134,7 +127,11 @@ Select {books_count} books that share this aesthetic DNA. Prioritize:
             if constraint_list:
                 prompt += f"\n\nCONSTRAINTS:\n• " + "\n• ".join(constraint_list)
 
-        prompt += f"\n\nReturn response as valid JSON matching this exact structure:\n{self._get_json_schema()}"
+        prompt += f"""
+
+CRITICAL: Respond with ONLY the JSON below. No explanations, no markdown, no extra text:
+
+{self._get_json_schema()}"""
         
         return prompt
     
@@ -144,16 +141,46 @@ Select {books_count} books that share this aesthetic DNA. Prioritize:
             # Clean up the response to extract JSON
             content = content.strip()
             
-            # Find JSON boundaries
+            # Remove common markdown patterns
+            content = content.replace('```json', '').replace('```', '')
+            content = content.replace('**STEP 1 - TASTE ANALYSIS:**', '')
+            content = content.replace('**STEP 2 - BOOK RECOMMENDATIONS:**', '')
+            
+            # Find JSON boundaries - look for complete JSON object
             json_start = content.find('{')
-            json_end = content.rfind('}') + 1
             
-            if json_start == -1 or json_end <= json_start:
-                logger.error("No valid JSON found in GPT response")
+            # Find the matching closing brace by counting braces
+            if json_start != -1:
+                brace_count = 0
+                json_end = json_start
+                for i, char in enumerate(content[json_start:], json_start):
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            json_end = i + 1
+                            break
+                
+                if json_end > json_start:
+                    json_str = content[json_start:json_end]
+                    # Try to fix common JSON issues
+                    json_str = json_str.replace('\n', ' ').replace('\r', '')
+                    # Remove incomplete quotes at the end
+                    if json_str.count('"') % 2 != 0:
+                        last_quote = json_str.rfind('"')
+                        json_str = json_str[:last_quote]
+                        # Add closing braces if needed
+                        open_braces = json_str.count('{') - json_str.count('}')
+                        json_str += '}' * open_braces
+                    
+                    data = json.loads(json_str)
+                else:
+                    logger.error("Could not find complete JSON object")
+                    return self._create_fallback_response(movies)
+            else:
+                logger.error("No JSON start found in GPT response")
                 return self._create_fallback_response(movies)
-            
-            json_str = content[json_start:json_end]
-            data = json.loads(json_str)
             
             # Validate required fields
             if 'unified_recommendations' not in data:
@@ -295,7 +322,7 @@ RESPONSE FORMAT:
         
         try:
             response = await self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=settings.gpt_model,
                 messages=[
                     {"role": "system", "content": "You are an expert in cross-media aesthetic analysis. Extract unified patterns from film preferences. Always respond with valid JSON only."},
                     {"role": "user", "content": prompt}

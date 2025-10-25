@@ -15,8 +15,12 @@ class HardcoverService:
 
     def _get_auth_header(self) -> str:
         """Get properly formatted authorization header"""
-        # Hardcover API expects "Bearer" prefix with capital Authorization header
-        return f"Bearer {self.api_key}"
+        # Check if the API key already has Bearer prefix
+        if self.api_key.startswith("Bearer "):
+            return self.api_key
+        else:
+            # Hardcover API expects "Bearer" prefix with capital Authorization header
+            return f"Bearer {self.api_key}"
 
     def _clean_search_query(self, query: str) -> str:
         """Clean up search query to improve results"""
@@ -376,7 +380,7 @@ class HardcoverService:
             best_score, best_book = scored_results[0]
             
             # Much lower threshold since search endpoint should return relevant results
-            if best_score > 10:  # Reduced from 20
+            if best_score > 5:  # Further reduced to accept more matches
                 logger.info(f"Selected best match: '{best_book.get('title')}' (score: {best_score:.1f})")
                 return best_book
             else:

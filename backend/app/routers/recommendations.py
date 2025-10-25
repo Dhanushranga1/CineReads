@@ -136,9 +136,11 @@ async def _generate_individual_recommendations(request: RecommendationRequest) -
 
 async def _enhance_with_metadata(recommendations: List[RecommendationResponse]) -> List[RecommendationResponse]:
     """Enhance recommendations with metadata from Hardcover"""
+
     enhanced_recommendations = []
     
     for rec in recommendations:
+
         enhanced_books = []
         
         # Process books concurrently for better performance
@@ -155,6 +157,7 @@ async def _enhance_with_metadata(recommendations: List[RecommendationResponse]) 
 async def enhance_book_with_metadata(book):
     """Enhance a book recommendation with metadata from Hardcover"""
     try:
+
         # Create cache key for book metadata
         book_cache_key = create_book_cache_key(book.title, book.author)
         

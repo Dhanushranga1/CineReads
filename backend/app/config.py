@@ -6,7 +6,10 @@ class Settings(BaseSettings):
     
     # Required API keys
     openai_api_key: str
-    hardcover_api_key: str
+    hardcover_api_key: str = ""  # Optional, can be empty
+    
+    # OpenAI-compatible API configuration (for Groq support)
+    openai_base_url: str = "https://api.openai.com/v1"  # Default to OpenAI, can override for Groq
     
     # Cache settings
     cache_dir: str = "cache"
@@ -18,6 +21,7 @@ class Settings(BaseSettings):
     max_movies_per_request: int = 5
     gpt_max_tokens: int = 1200  # Increased for more detailed responses
     gpt_temperature: float = 0.7
+    gpt_model: str = "gpt-4o-mini"  # Can be overridden for other providers like Groq
     
     # Recommendation settings
     books_per_recommendation: int = 5  # Number of books to recommend
@@ -26,7 +30,7 @@ class Settings(BaseSettings):
     enable_recommendation_insights: bool = True
     
     # Book metadata enhancement
-    enable_hardcover_integration: bool = True
+    enable_hardcover_integration: bool = True  # Enable Hardcover integration for book metadata
     hardcover_timeout_seconds: int = 10
     hardcover_retry_attempts: int = 3
     

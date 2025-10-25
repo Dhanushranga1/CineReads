@@ -21,8 +21,13 @@ This document explains how to set up environment variables for the CineReads bac
 
 ### API Keys (Required)
 
-- **OPENAI_API_KEY**: Your OpenAI API key for GPT recommendations
+- **OPENAI_API_KEY**: Your OpenAI or Groq API key for LLM recommendations
 - **HARDCOVER_API_KEY**: Your Hardcover API key for book metadata
+
+### LLM Provider Configuration
+
+- **OPENAI_BASE_URL**: API base URL (default: OpenAI, set to `https://api.groq.com/openai/v1` for Groq)
+- **GPT_MODEL**: Model to use (default: `gpt-4o-mini` for OpenAI, `llama3-8b-8192` or `mixtral-8x7b-32768` for Groq)
 
 ### Cache Configuration
 
