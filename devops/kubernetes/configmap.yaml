@@ -1,0 +1,42 @@
+---
+# Backend API Secret - Environment Variables
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-secrets
+  namespace: cinereads
+type: Opaque
+stringData:
+  OPENAI_API_KEY: "your-groq-api-key-here"
+  HARDCOVER_API_KEY: "your-hardcover-api-key-here"
+  OPENAI_BASE_URL: "https://api.groq.com/openai/v1"
+  GPT_MODEL: "llama-3.3-70b-versatile"
+---
+# Backend ConfigMap - Non-sensitive configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: cinereads
+data:
+  PORT: "8000"
+  HOST: "0.0.0.0"
+  CORS_ORIGINS: "http://cinereads.dhanushranga1.dev,https://cinereads.dhanushranga1.dev"
+  LOG_LEVEL: "info"
+  CACHE_DIR: "/app/cache"
+  CACHE_EXPIRE_SECONDS: "3600"
+  BOOK_CACHE_EXPIRE_SECONDS: "86400"
+  MAX_MOVIES_PER_REQUEST: "5"
+  GPT_MAX_TOKENS: "800"
+  GPT_TEMPERATURE: "0.7"
+  ENABLE_HARDCOVER_INTEGRATION: "true"
+  DEBUG: "false"
+---
+# Frontend ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: cinereads
+data:
+  NEXT_PUBLIC_API_URL: "http://cinereads.dhanushranga1.dev/api"

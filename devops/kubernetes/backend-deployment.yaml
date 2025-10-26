@@ -1,0 +1,154 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: cinereads
+  labels:
+    app: cinereads
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cinereads
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: cinereads
+        component: backend
+    spec:
+      containers:
+      - name: backend
+        image: ghcr.io/dhanushranga1/cinereads-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: PORT
+        - name: HOST
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: HOST
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: OPENAI_API_KEY
+        - name: OPENAI_BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: OPENAI_BASE_URL
+        - name: GPT_MODEL
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: GPT_MODEL
+        - name: HARDCOVER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: HARDCOVER_API_KEY
+        - name: CORS_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: CORS_ORIGINS
+        - name: CACHE_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: CACHE_DIR
+        - name: CACHE_EXPIRE_SECONDS
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: CACHE_EXPIRE_SECONDS
+        - name: BOOK_CACHE_EXPIRE_SECONDS
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: BOOK_CACHE_EXPIRE_SECONDS
+        - name: MAX_MOVIES_PER_REQUEST
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: MAX_MOVIES_PER_REQUEST
+        - name: GPT_MAX_TOKENS
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: GPT_MAX_TOKENS
+        - name: GPT_TEMPERATURE
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: GPT_TEMPERATURE
+        - name: ENABLE_HARDCOVER_INTEGRATION
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: ENABLE_HARDCOVER_INTEGRATION
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: DEBUG
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: cache
+          mountPath: /app/cache
+      volumes:
+      - name: cache
+        emptyDir: {}
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: cinereads
+  labels:
+    app: cinereads
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: cinereads
+    component: backend
