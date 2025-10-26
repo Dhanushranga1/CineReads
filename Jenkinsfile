@@ -34,8 +34,8 @@ pipeline {
         // Keep last 10 builds
         buildDiscarder(logRotator(numToKeepStr: '10'))
         
-        // Timeout after 30 minutes
-        timeout(time: 30, unit: 'MINUTES')
+        // Timeout after 60 minutes (first build takes longer)
+        timeout(time: 60, unit: 'MINUTES')
         
         // Disable concurrent builds
         disableConcurrentBuilds()
